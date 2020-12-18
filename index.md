@@ -7,3 +7,7 @@
 ## Homework 1 (20/11/2020)
 
 [Here](files/Homework1.html) is my homework report.
+
+## Homework 2 (18/12/2020)
+
+[Here](files/hw22.html) is my homework report.

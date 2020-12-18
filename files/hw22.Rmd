@@ -1,0 +1,298 @@
+---
+title: "A Correlation Study Among Monthly TRY/USD Rate, Total Import of Turkey, BIST100 Index and Foreign Currency Liabilities of Turkish Public and Private Sector Organizations between 2016-2020"
+author: "Muhammed Ikbal Baykal - IE360 - Fall 2020"
+output: html_document
+---
+
+## Introduction
+
+In recent years, economic data of Turkey has always been a topic to be discussed among Turkish citizens. Especially, the fluctuations in the TRY/USD exchange rate have become one of the most important points that make this subject attractive. Even if the exchange rate, which rose as a result of a crisis in the summer of 2018, was lowered in the short term, it continued to increase day by day and bring economic problems with it. As one of the most basic data of a country's economy, data such as foreign exchange rate, import export figures, stock exchange index can be given as examples.
+
+So the question is: **"Is there any relation among these?"** 
+
+* When we consider the economy as a whole, we expect a change at one point to cause a change at another point. Suppose we take the TRY/USD as a base. 
+A permanent increase in the exchange rate causes an increase in the export figures of the country on a local currency basis and a decrease or stability in the import figures on the basis of local currency. In this study, the relation between exchange rate and total import of Turkey will be examined using EVDS data. 
+
+* It is possible to  say that investors in the country can make their investments in foreign currency or through the purchase and sale of shares. A fluctuation in the dollar exchange rate may push the investors to keep their money in foreign currency or into shares, or to invest in a different way. 
+This study will examine the effects of exchange rate movements on the BIST100 (stock exchange) index.
+
+* The Turkish public and private sector's foreign exchange liabilities are also closely related to the exchange (especially TRY/USD) rate. Although the revenues of these institutions are predominantly in Turkish lira, foreign exchange-based borrowing has been made while borrowing. This reveals the impact of the change in exchange rates on these liabilities. In this study, the relation between two will be examined.
+
+* Also, the other relations such as "Total Import - BIST100 Index", "Total Import - Foreign Currency Liabilities", "BIST100 Index - Foreign Currency Liabilities will be examined in this study.
+
+## Data, Manipulation of Data and Visualization of Data
+
+All necessary data were taken from [EVDS](https://evds2.tcmb.gov.tr/) web page. The period of data was between December 2015 and December 2020 to make up-to-date and logical inferences. Monthly data were used in this study.
+
+First of all, libraries required for the study were added and the data was read in the excel file.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+library(ggplot2)
+library(zoo)
+library(data.table)
+library(fpp2)
+library(GGally)
+library(readxl)
+
+setwd("C:/Users/90533/Desktop")
+mydata<-read_excel("EVDS (3).xlsx")
+```
+
+After that, some manipulations were needed for validity. Date format was corrected and December 2015 row was deleted. Since there was only one month of data available in 2015, it was decided that this data had no meaning on its own and was removed. Data were separated by years for later use. 
+Column names were changed and translated to English.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+mydata$Tarih<-as.Date(mydata$Tarih, format="%y/%m/½d")
+mydata <- mydata[-1, ]
+data_16 <- mydata[ year(mydata$Tarih) == 2016  , ]
+data_17 <- mydata[ year(mydata$Tarih) == 2017  , ]
+data_18 <- mydata[ year(mydata$Tarih) == 2018  , ]
+data_19 <- mydata[ year(mydata$Tarih) == 2019  , ]
+data_20 <- mydata[ year(mydata$Tarih) == 2020  , ]
+colnames(mydata) = c("Date", "Total Import", "BIST100", "TRY/USD", "Exchange Liabilities")
+```
+
+Here we can see the first 10 rows of the data and examine its structure.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+head(mydata, 10)
+str(mydata)
+```
+
+Let us examine all data groups one by one. 
+
+### TRY/USD Rate
+
+Histogram of TRY/USD Rate is obtained to see how our data is distributed and get information about the data.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(mydata, aes(x=`TRY/USD`, y=..density..)) + 
+  geom_histogram(colour="mediumblue", fill="lightblue", bins = 15)+ 
+  geom_density(alpha=.2, colour="mediumblue", fill="lightblue") +
+  facet_wrap(~year(Date), ncol=5)+
+  labs(title = "Yearly Histogram of TRY/USD Rate between 2016-2020", 
+       x = "USD/TRY",
+       y = "Density") +  theme_minimal() +
+  theme(axis.text.x = element_text(size=10, hjust = 1))
+  
+```
+
+It is obvious that TRY/USD rate increases between 2016-2020. THere is a certain increase (shift to the right) in 2018 in data. The values are close in 2016 and 2017 but they are separated after that. It can be said that USD/TRY had different values (fluctuations) at those times. The distributions look like normal distributions with variable variances. From this histogram, we can understand that the rate was fluctuating especially in 2018 and 2020 (higher variance) in which economical crisis occurred.
+
+Boxplot of TRY/USD Rate is obtained to see the yearly changes in data.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(mydata, aes(x=Date, y=mydata$'TRY/USD'), group=year(Date)) +
+  geom_boxplot(aes(fill= factor(year(Date)))) +
+  labs(title = "Yearly Boxplot of TRY/USD Rate between 2016-2020", 
+       x = "Years",
+       y = "USD/TRY") +
+  scale_fill_discrete(name = "Years")
+```
+In this boxplot, it is easier to see the increase at the rate and the high variances in 2018 and 2020. 
+
+### Total Import of Turkey
+
+Histogram of Total Import of Turkey is obtained to see how our data is distributed and get information about the data.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(mydata, aes(x=`Total Import`, y=..density..)) + 
+  geom_histogram(colour="mediumblue", fill="lightblue", bins = 15)+ 
+  geom_density(alpha=.2, colour="mediumblue", fill="lightblue") +
+  facet_wrap(~year(Date), ncol=5)+
+  labs(title = "Yearly Histogram of Total Import of Turkey between 2016-2020", 
+       x = "Total Import of Turkey",
+       y = "Density") +  theme_minimal() +
+  theme(axis.text.x = element_text(size=10, hjust = 1))
+```
+
+This data is given in 1000 US Dollars. In this histogram, we can obtain that all 5 graphs look like each other in someway and normally distributed. We expect an increase of export and import figures over the years in a developing country such as Turkey and a real growth by increasing exports faster and reaching import figures. Turkey is said to be forced to maintain or even reduce its total import due to increasing currency rate. This can be seen in 2020 graph clearly. 
+
+Boxplot of Total Import of Turkey is obtained to see the yearly changes in data.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(mydata, aes(x=Date, y=mydata$'Total Import'), group=year(Date)) +
+  geom_boxplot(aes(fill= factor(year(Date)))) + 
+  labs(title = "Yearly Boxplot of Total Import of Turkey between 2016-2020", 
+       x = "Years",
+       y = "Total Import of TUrkey") +
+  scale_fill_discrete(name = "Years")
+```
+
+The effect of the increase in TRY/USD Rate can be seen more clear in this boxplot. Total import of the country decreases after 2017 and is maintained in 2020. 
+
+### BIST100 Index
+
+Histogram of BIST100 Index is obtained to see how our data is distributed and get information about the data.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(mydata, aes(x=`BIST100`, y=..density..)) + 
+  geom_histogram(colour="mediumblue", fill="lightblue", bins = 15)+ 
+  geom_density(alpha=.2, colour="mediumblue", fill="lightblue") +
+  facet_wrap(~year(Date), ncol=5)+
+  labs(title = "Yearly Histogram of BIST100 Index between 2016-2020", 
+       x = "BIST100",
+       y = "Density") +  theme_minimal() +
+  theme(axis.text.x = element_text(size=10, hjust = 1))
+```
+
+From this histogram, it can be seen that the distributions of 2017, 2018, 2019 and 2020 data seem like normal distribution. A slightly increase (shift to right) over the years is obtained. Despite the increase in the dollar exchange rate, it can be said that the stock market index continues to increase. This may mean that the investor trusts Turkish companies and that Turkish companies are performing well despite the crisis. Variances are not low since the investors can change their invest type throughout the year.
+
+Boxplot of BIST100 Index is obtained to see the yearly changes in data.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(mydata, aes(x=Date, y=mydata$BIST100), group=year(Date)) +
+  geom_boxplot(aes(fill= factor(year(Date)))) +
+  labs(title = "Yearly Boxplot of BIST100 Index between 2016-2020", 
+       x = "Years",
+       y = "BIST100 Index") +
+  scale_fill_discrete(name = "Years")
+```
+
+The slightly increase can be seen in the boxplot after 2017 despite the foreign currency rate increase.
+
+### Foreign Currency Liabilities of Sectors
+
+Histogram of Foreign Currency Liabilities of Sectors is obtained to see how our data is distributed and get information about the data.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(mydata, aes(x=`Exchange Liabilities`, y=..density..)) + 
+  geom_histogram(colour="mediumblue", fill="lightblue", bins = 15)+ 
+  geom_density(alpha=.2, colour="mediumblue", fill="lightblue") +
+  facet_wrap(~year(Date), ncol=5)+
+  labs(title = "Yearly Histogram of Foreign Currency Liabilities between 2016-2020", 
+       x = "Foreign Currency Liabilities",
+       y = "Density") +  theme_minimal() +
+  theme(axis.text.x = element_text(size=10, hjust = 1))
+```
+
+This data is given 1000 Turkish Liras. From this histogram, it can be seen that distributions of all data look like normal but with a higher variance in 2020 due to fluctuations of TRY/USD Rate. It is possible to say that foreign exchange liabilities are highly affected by the increase in foreign exchange rates. The histogram of TRY/USD and Foreign Exchange Liabilities look similar to each other. Total increase can be seen from the x axis. Even if foreign exchange liabilities remained constant, they increased considerably due to the exchange rate (TRY/USD) difference.
+
+Boxplot of Foreign Currency Liabilities of Sectors is obtained to see the yearly changes in data.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(mydata, aes(x=Date, y=mydata$'Exchange Liabilities'), group=year(Date)) +
+  geom_boxplot(aes(fill= factor(year(Date)))) + 
+  labs(title = "Yearly Boxplot of Foreign Currency Liabilities between 2016-2020", 
+       x = "Years",
+       y = "Foreign Currency Liabilities ") +
+  scale_fill_discrete(name = "Years")
+```
+
+The fluctuations of TRY/USD Rate this year creates a higher variance than the other years. 
+
+### All Combined Line Graph
+
+Here all data can be seen in a combined line graph for comparison.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(mydata, aes(x=Date, y=`TRY/USD`), group=types) + geom_line(color="chocolate4") + geom_line(aes(y=`Total Import`/10000000), color="royalblue4") + geom_line(aes(y=BIST100/100), color="olivedrab3") + 
+  geom_line(aes(y=`Exchange Liabilities`/100000000), color="deeppink4") + labs(title = "All Combined Monthly Data in One Graph between 2016-2020",  x = "Years", y="Value") + 
+  theme(legend.position = "right") + theme_classic()
+```
+
+**BROWN = TRY/USD**
+**BLUE = TOTAL IMPORT**
+**GREEN = BIST100 Index**
+**RED = FOREIGN EXCHANGE LIABILITIES**
+Due to some error in the code, legends cannot be seen in the graph.
+
+From this graph, the trends can be examined. There is an upward trend for TRY/USD, BIST100 Index and Foreign Exchange Liabilities. The trend for Total Import is slightly downward. The trend for TRY/USD and the trend for Foreign Exchange Liabilities are very similar to each other as we expressed before. To find the valid relation between these, we need further examinations, which are correlation analyses. We will have more information about their relations after correlation analyses.
+
+### Correlation Analyses 
+
+Before continuing with correlation tests, one more visualization may be helpful to understand the relations. We will have scatter plots and correlation coefficients in a single graph which is a predecessor of correlation tests. 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggpairs(mydata[,-1])
+```
+
+In this single graph, we can see all correlation coefficients and scatter plots. We can notice from the correlation coefficients, there are some strong correlation, weak correlation and no correlation cases between the data groups we have. In the diagonals, we see some normal distribution cases. In the scatter plots, correlation coefficient estimates can also be made according to the distribution of the points. More scattered and no trendless points mean lower correlation coefficient where more ordered and trending points mean higher correlation coefficient. For example, we see ordered points while comparing TRY/USD and Foreign Exchange Liabilities data and we obtain a high correlation coefficient "0.943". 
+
+#### Correlation Test Between TRY/USD Rate and Total Import of Turkey
+
+We have a null hypothesis expressing that correlation between two data is 0. We fail to reject the null hypothesis until the p value is small enough. 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+print(cor.test(mydata$`TRY/USD`,mydata$`Total Import`))
+```
+
+Here our p value is greater than 0.05 which means we fail to reject the null hypothesis expressing there is no correlation between these two data. If p value was lower than 0.05, we could have rejected the null hypothesis and accepted the alternative hypothesis expressing that there is a significant correlation between these two data. We can also obtain this result from the correlogram.
+
+#### Correlation Test Between TRY/USD Rate and BIST100 Index
+
+Our null hypothesis is that correlation between TRY/USD Rate and BIST100 Index is zero. We can reject this null hypothesis if we obtain a small p value after the test. 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+print(cor.test(mydata$`TRY/USD`,mydata$BIST100))
+```
+
+Here our p value is lower than 0.05 which means we reject the null hypothesis and accept the alternative hypothesis expressing that true correlation is not equal to 0. There is a significant correlation between TRY/USD Rate and BIST100 Index. This correlation can be seen from the correlogram. Since the correlation coefficient is positive, this correlation is a positive correlation.
+
+
+#### Correlation Test Between TRY/USD Rate and Foreign Exchange Liabilities
+
+We have a null hypothesis which means our true correlation between TRY/USD Rate and Foreign Exchange Liabilities is equal to 0. We need to look at our p value to decide whether we reject the null hypothesis or fail to reject it. 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+print(cor.test(mydata$`TRY/USD`,mydata$`Exchange Liabilities`))
+```
+
+Here our p value is extremely small. This allows us to reject the null hypothesis and accept the alternative hypothesis meaning that true correlation between these two data is not equal to 0. Since our p value is extremely small, this corresponds to a very strong correlation between two data. We also obtain this result from the correlogram. In scatter plots, we had ordered points and upward trend which corresponds to a strong correlation. This correlation is a positive correlation because our correlation coefficient is positive. 
+
+#### Correlation Test Between BIST100 Index and Total Import of Turkey
+
+Our null hypothesis is that true correlation between BIST100 Index and Total Import of Turkey is equal to 0. We need a small enough p value to reject it. Otherwise, we fail to reject the null hypothesis.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+print(cor.test(mydata$BIST100,mydata$`Total Import`))
+```
+
+Here our p value is lower than 0.05 which leads us to reject the null hypothesis and accept the alternative hypothesis meaning that true correlation between BIST100 Index and Total Import of Turkey is not equal to zero. There is a significant correlation between these two data and the correlation is positive correlation. 
+
+#### Correlation Test Between BIST100 Index and Foreign Exchange Liabilities
+
+We have a null hypothesis meaning that true correlation between two data is 0. To reject or fail to reject the null hypothesis we should look for p value after the test.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+print(cor.test(mydata$BIST100,mydata$`Exchange Liabilities`))
+```
+
+Here our p value is very small, lower than 0.05.This allows us to reject the null hypothesis which means true correlation is zero between these two data. We accept the alternative hypothesis which expresses that correlation between these two data is not equal to 0. There is a significant positive correlation.
+
+#### Correlation Test Between Total Import of Turkey and Foreign Exchange Liabilities
+
+Our null hypothesis and alternative hypothesis are same with the previous steps. We will examine the correlation between Total Import of Turkey and Foreign Exchange Liabilities. We should focus on the p value after the test.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+print(cor.test(mydata$`Total Import`,mydata$`Exchange Liabilities`))
+
+```
+
+
+Here our p value is greater than 0.05 which leads us to fail to reject the null hypothesis which expresses that true correlation between these two data is equal to 0. We cannot say there is a significant correlation between these two data. We can also obrain this result from the correlogram.
+
+### Conclusions
+
+The question was **"Is there any relation between data we used?"**. The study was about finding relations (correlations) among monthly "TRY/USD Rate", "Total Import of Turkey", "BIST100 Index" and "Foreign Currency Liabilities of Turkish public and private sector organizations" data between 2016-2020. All data were taken from EVDS web page. To be able to find these relations, we have used many histograms, boxplots, line graphs, scatter plots, correlation tests. After all is done, we have found some relations among these. Some expected correlations were not found where some unexpected correlations were found. Here are some comments about the results:
+
+* When we take the "TRY/USD" as a basis, we expect to see that the purchasing power weakens and import rates decrease with the increase in the exchange rate. It means that we should see a negative correlation between "TRY/USD" and "Total Import of Turkey" data. But we could not find this correlation between these two. The reason may be that our total import data was given in Turkish Lira. If the data was given in US dollars, we could find a negative correlation since we could obtain a steeper decrease on the data. Further improvements can be made on the data and a negative correlation can be obtained in further studies.
+
+* While comparing "TRY/USD" and "BIST100 Index", unexpected result occurred for me. I was not expecting positive correlation between these two. Because when the stock market and exchange rates are followed, the rise of the exchange rate causes a fall in the stock market, while its fall causes a rise generally. It can be concluded that the main reason for the activity in the stock market is not the foreign currency rates.
+
+* "TRY/USD Rate" and "Foreign Exchange Liabilities" has a strong positive correlations. The main reason is that although foreign exchange liabilities of public and private sectors of Turkey remain stable (as US dollars, not Turkish lira) in general, an increase in TRY/USD Rate results in an increase in the foreign exchange liabilities.
+
+* Other than that, we have significant correlations between "BIST100 Index" and "Total Import of Turkey", "BIST100 Index" and "Foreign Exchange Liabilities". 
+
+It is pleasing to be able to achieve really meaningful results by the end of the study.
+
+### References
+* [EVDS Web Page](https://evds2.tcmb.gov.tr/)
+* [STHDA](http://www.sthda.com/english/)
+* [Stackoverflow](https://stackoverflow.com/)
+
+### Appendices
+
+Click [here](https://bu-ie-360.github.io/fall20-mibaykal/files/hw22.Rmd) to reach the RMD file.
+
+
