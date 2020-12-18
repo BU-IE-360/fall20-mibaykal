@@ -1,5 +1,5 @@
 ---
-title: "A Correlation Study Among Monthly TRY/USD Rate, Total Import of Turkey, BIST100 Index and Foreign Currency Liabilities of Turkish Public and Private Sector Organizations between 2016-2020"
+title: "A Correlation Study Among Monthly Data of TRY/USD Rate, Total Import of Turkey, BIST100 Index and Foreign Currency Liabilities of Turkish Public and Private Sector Organizations between 2016-2020"
 author: "Muhammed Ikbal Baykal - IE360 - Fall 2020"
 output: html_document
 ---
@@ -16,15 +16,15 @@ A permanent increase in the exchange rate causes an increase in the export figur
 * It is possible to  say that investors in the country can make their investments in foreign currency or through the purchase and sale of shares. A fluctuation in the dollar exchange rate may push the investors to keep their money in foreign currency or into shares, or to invest in a different way. 
 This study will examine the effects of exchange rate movements on the BIST100 (stock exchange) index.
 
-* The Turkish public and private sector's foreign exchange liabilities are also closely related to the exchange (especially TRY/USD) rate. Although the revenues of these institutions are predominantly in Turkish lira, foreign exchange-based borrowing has been made while borrowing. This reveals the impact of the change in exchange rates on these liabilities. In this study, the relation between two will be examined.
+* The Turkish public and private sector's foreign exchange liabilities are also closely related to the exchange (especially TRY/USD) rate. Although the revenues of these institutions are predominantly in Turkish lira, foreign exchange-based borrowing has been made. This reveals the impact of the change in exchange rates on these liabilities. In this study, the relation between two will be examined.
 
 * Also, the other relations such as "Total Import - BIST100 Index", "Total Import - Foreign Currency Liabilities", "BIST100 Index - Foreign Currency Liabilities will be examined in this study.
 
-## Data, Manipulation of Data and Visualization of Data
+## Data, Manipulation and Visualization of Data
 
 All necessary data were taken from [EVDS](https://evds2.tcmb.gov.tr/) web page. The period of data was between December 2015 and December 2020 to make up-to-date and logical inferences. Monthly data were used in this study.
 
-First of all, libraries required for the study were added and the data was read in the excel file.
+First of all, libraries required for the study were added and the data were read in the excel file.
 
 ```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
 library(ggplot2)
@@ -71,13 +71,13 @@ ggplot(mydata, aes(x=`TRY/USD`, y=..density..)) +
   geom_density(alpha=.2, colour="mediumblue", fill="lightblue") +
   facet_wrap(~year(Date), ncol=5)+
   labs(title = "Yearly Histogram of TRY/USD Rate between 2016-2020", 
-       x = "USD/TRY",
+       x = "TRY/USD",
        y = "Density") +  theme_minimal() +
   theme(axis.text.x = element_text(size=10, hjust = 1))
   
 ```
 
-It is obvious that TRY/USD rate increases between 2016-2020. THere is a certain increase (shift to the right) in 2018 in data. The values are close in 2016 and 2017 but they are separated after that. It can be said that USD/TRY had different values (fluctuations) at those times. The distributions look like normal distributions with variable variances. From this histogram, we can understand that the rate was fluctuating especially in 2018 and 2020 (higher variance) in which economical crisis occurred.
+It is obvious that TRY/USD rate increases between 2016-2020. There is a certain increase (shift to the right) in 2018. The values are close in 2016 and 2017 but they are separated after that. It can be said that USD/TRY had different values (fluctuations) at those times. The distributions look like normal distributions with variable variances. From this histogram, we can understand that the rate was fluctuating especially in 2018 and 2020 (higher variance) in which economical crisis occurred.
 
 Boxplot of TRY/USD Rate is obtained to see the yearly changes in data.
 
@@ -86,7 +86,7 @@ ggplot(mydata, aes(x=Date, y=mydata$'TRY/USD'), group=year(Date)) +
   geom_boxplot(aes(fill= factor(year(Date)))) +
   labs(title = "Yearly Boxplot of TRY/USD Rate between 2016-2020", 
        x = "Years",
-       y = "USD/TRY") +
+       y = "TRY/USD") +
   scale_fill_discrete(name = "Years")
 ```
 In this boxplot, it is easier to see the increase at the rate and the high variances in 2018 and 2020. 
@@ -106,7 +106,7 @@ ggplot(mydata, aes(x=`Total Import`, y=..density..)) +
   theme(axis.text.x = element_text(size=10, hjust = 1))
 ```
 
-This data is given in 1000 US Dollars. In this histogram, we can obtain that all 5 graphs look like each other in someway and normally distributed. We expect an increase of export and import figures over the years in a developing country such as Turkey and a real growth by increasing exports faster and reaching import figures. Turkey is said to be forced to maintain or even reduce its total import due to increasing currency rate. This can be seen in 2020 graph clearly. 
+This data is given in 1000 US Dollars. In this histogram, we can obtain that all 5 graphs are similar to each other and normally distributed. We expect an increase of export and import figures over the years in a developing country such as Turkey and a real growth by increasing exports faster and reaching import figures. Turkey had to maintain or even reduce its total import due to increasing currency rate. This can be seen in 2020 graph clearly. 
 
 Boxplot of Total Import of Turkey is obtained to see the yearly changes in data.
 
@@ -115,7 +115,7 @@ ggplot(mydata, aes(x=Date, y=mydata$'Total Import'), group=year(Date)) +
   geom_boxplot(aes(fill= factor(year(Date)))) + 
   labs(title = "Yearly Boxplot of Total Import of Turkey between 2016-2020", 
        x = "Years",
-       y = "Total Import of TUrkey") +
+       y = "Total Import of Turkey") +
   scale_fill_discrete(name = "Years")
 ```
 
@@ -207,7 +207,7 @@ Before continuing with correlation tests, one more visualization may be helpful 
 ggpairs(mydata[,-1])
 ```
 
-In this single graph, we can see all correlation coefficients and scatter plots. We can notice from the correlation coefficients, there are some strong correlation, weak correlation and no correlation cases between the data groups we have. In the diagonals, we see some normal distribution cases. In the scatter plots, correlation coefficient estimates can also be made according to the distribution of the points. More scattered and no trendless points mean lower correlation coefficient where more ordered and trending points mean higher correlation coefficient. For example, we see ordered points while comparing TRY/USD and Foreign Exchange Liabilities data and we obtain a high correlation coefficient "0.943". 
+In this single graph, we can see all correlation coefficients and scatter plots. We can obtain from the correlation coefficients, there are some strong correlation, weak correlation and no correlation cases between the data groups we have. In the diagonals, we see some normal distribution cases. In the scatter plots, correlation coefficient estimates can also be made according to the distribution of the points. More scattered and trendless points mean lower correlation coefficient where more ordered and trending points mean higher correlation coefficient. For example, we see ordered points while comparing TRY/USD and Foreign Exchange Liabilities data and we obtain a high correlation coefficient "0.943". 
 
 #### Correlation Test Between TRY/USD Rate and Total Import of Turkey
 
