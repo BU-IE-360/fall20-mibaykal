@@ -1,0 +1,79 @@
+---
+title: "Homework3"
+author: "Muhammed Ikbal Baykal - IE360 - Fall 2020"
+output: html_document
+---
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+library(ggplot2)
+library(zoo)
+library(data.table)
+library(fpp)
+library(fpp2)
+library(GGally)
+library(readxl)
+library(corrplot)
+library(xts)
+library(astsa)
+library(gridExtra)
+
+setwd("C:/Users/90533/Desktop")
+mydata<-read_excel("EVDS (3).xlsx")
+head(mydata, 5)
+str(mydata)
+
+#mydata$Tarih<-as.Date(mydata$Tarih, format="%y/%m")
+colnames(mydata) = c("Date", "Mortgaged House Sale Statistics", "Total House Sale Statistics", "Interest Rate For House Credits", "Interest Rate", "House Price Index", "Unit House Prices", "Consumer Price Index")
+
+transform(mydata, Date = as.yearmon(Date))
+
+mydata2 <- as.xts(mydata[,-1], order.by = as.yearmon(mydata$Date))
+head(mydata2, 5)
+
+
+plot(mydata2$`Mortgaged House Sale Statistics`, main = "Mortgaged House Sale Statistics")
+
+mydata3 <- log(mydata2)
+
+plot(mydata3$`Mortgaged House Sale Statistics`, main = "Mortgaged House Sale Statistics")
+
+plot.zoo(mydata2[,2:ncol(mydata2)], main = "Plot of Variables", color = "blue", widths=1, heights=1, plot.type = "multiple")
+
+plot.zoo(mydata3[,2:ncol(mydata3)], main = "Plot of Variables", color = "blue", widths=1, heights=1, plot.type = "multiple")
+
+ggpairs(as.data.frame(mydata3))
+
+c <- cor(mydata3)
+corrplot(c, method="number")
+
+acf(mydata3$`Mortgaged House Sale Statistics`, lag.max = 40, na.action = na.pass)
+
+l <- lm(formula = `Mortgaged House Sale Statistics` ~ `Interest Rate For House Credits`, data = mydata3)
+summary(l)
+checkresiduals(l)
+checkresiduals(l, lag=12)
+
+l2 <- lm(formula = `Mortgaged House Sale Statistics` ~ `Interest Rate For House Credits` + `Total House Sale Statistics`, data = mydata3)
+summary(l2)
+checkresiduals(l2)
+checkresiduals(l2, lag=12)
+
+
+mydata2 <- data.table(mydata2)
+mydata2[,fitted := fitted(l)]
+mydata2[,residual := residuals(l)]
+
+mydata2 %>%
+  ggplot(aes(x=fitted, y=residual)) + geom_point()
+
+mydata2 %>%
+  ggplot(aes(x=fitted, y=log(mydata2$`Mortgaged House Sale Statistics`))) + 
+  geom_point() +
+  geom_abline(slope=1, intercept=0)
+```
+
+
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+
+```

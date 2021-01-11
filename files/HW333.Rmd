@@ -1,0 +1,225 @@
+---
+title: "Forecast of Next Month's Number of Mortgaged House Sale in Turkey by Using Linear Regression Model and Other Techniques "
+author: "Muhammed Ikbal Baykal - IE360 - Fall 2020"
+output: html_document
+---
+# Introduction
+
+  >Mortgaged House Sale Statistics
+
+Home loans are commonly referred to as mortgages, but a mortgage is actually a charge over a property. When a bank lends money, it requires security against a borrower’s failure to repay the money. The borrower grants the bank a mortgage over his or her property. If the borrower repays the debt secured by the mortgage, the mortgage is discharged. If not, the bank can sell the property to recover the money it is owed. This is called a mortgagee sale. 
+
+The aim of the study is to provide a forecast for December 2020 by building a time series regression model for forecasting next month’s value of the target variable. Data was taken from EVDS website. In this study, mortgaged house sales in Turkey between 2015-2020 will be examined and economic factors suitable for this data will be discussed. Suitable regression models for the data will be produced by using correlations between the data and other factors. After the model is produced, the development of the model will be provided by adding or removing other factors and it will be stopped when the most suitable model for the data is found. The forecast will be made for December 2020 according to the most suitable model.
+  
+Time series concepts will be used throughout the study and the data will be interpreted accordingly.
+  
+Mentioned economic factors that will be used in the study are:
+  
+  >Total House Sale Statistics
+  
+  >Interest Rate For House Credits
+  
+  >Interest Rate
+  
+  >House (Residential Property) Price Index
+  
+  >Housing Unit Prices
+  
+  >Consumer Confidence Index (CCI)
+  
+# Analysis of Data
+
+## Data Manipulation
+
+Libraries that are likely to be used throughout the study have been added.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+library(ggplot2)
+library(zoo)
+library(data.table)
+library(fpp)
+library(fpp2)
+library(GGally)
+library(readxl)
+library(corrplot)
+library(xts)
+library(astsa)
+library(gridExtra)
+library(lubridate)
+library(dplyr)
+```
+
+Data was imported from Excel and read in data.table format. Some manipulations and arrangements were made to make the data understandable. Column names changed and date format set. Here you can see the first 5 rows of the all data.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+setwd("C:/Users/90533/Desktop")
+mydata <- as.data.table(read_excel("EVDS (3).xlsx"))
+colnames(mydata) = c("Date", "Mortgaged House Sale Statistics", "Total House Sale Statistics", "Interest Rate For House Credits", "Interest Rate", "House Price Index", "Unit House Prices", "Consumer Confidence Index")
+mydata$Date <- as.yearmon(mydata$Date)
+head(mydata, 5)
+```
+
+## Data Visualization
+
+First of all, We can draw the histogram of our target variable to find some information about the data. Analyzing the target data is useful every time.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(mydata, aes(x=`Mortgaged House Sale Statistics`, y=..density..)) +
+  geom_histogram(colour="blue", fill="lightskyblue", bins = 10)+ 
+  geom_density(alpha=.2, colour="red", fill="orange") + labs(title = "Histograms of Number of Mortgaged House Sale in Turkey between 2015-2020", x = "       Number of Mortgaged House Sale", y = "Density") + theme_classic() + theme(axis.text.x = element_text(angle = 30, hjust = 1))
+```
+
+From the histogram, we can conclude that we have two outlier values, which correspond to a number higher than 1e+05, in the target data. We can filter the values higher than 1e+05 by using the "filter" function:
+
+```{r}
+mydata%>%filter(mydata$`Mortgaged House Sale Statistics`>1e+05)
+mydata2 <- mydata[-66,]
+mydataout <- mydata2[-66,]
+```
+
+When we look at the information above, it is possible to say that outliers are not seasonal, they have an instant rise as a result of the fall in housing interest rates in the summer of 2020. This is a result of a policy of Government of Turkish Republic after COVID-19 pandemic.
+
+The point and line plots of our target variable can also be drawn in two different ways:
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+plot(mydata$`Mortgaged House Sale Statistics`, main = "Mortgaged House Sale Statistics", type="l")
+
+ggplot(mydata, aes(x = Date, y=`Mortgaged House Sale Statistics`)) + geom_line(color="skyblue") + labs(title = "Total Number of Mortgaged House Sale", x = "Date", y= "Mortgaged House Sale") + geom_point(color="blue") + theme_classic()
+```
+
+In order to get rid of the variance effect and to see it more clearly, another drawing can be made on the logarithm of the target variable.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+plot(log(mydata$`Mortgaged House Sale Statistics`), main = "Mortgaged House Sale Statistics", type="l")
+
+ggplot(mydata, aes(x = Date, y=log(mydata$`Mortgaged House Sale Statistics`))) + geom_line(color="skyblue") + labs(title = "Logarithmic Total Number of Mortgaged House Sale", x = "Date", y= "Log of Mortgaged House Sale") + geom_point(color="blue") + theme_classic()
+```
+
+When the plot is examined, it does not seem possible to encounter a sharp seasonal or upward or downward trend in the data. In general, it can be said that the data was stable, there was a serious decrease in 2018 and a serious increase in 2020. The reason for the decrease in 2018 can be seen as the Priest Brunson incident and the policy of increasing the interest rates applied as a result of the increase in the exchange rate. In 2020, things have come to a standstill in many sectors within the framework of pandemic conditions. As a solution, the Government of the Republic of Turkey, lowered interest rates for house sales and aimed at the revival of all sectors.
+
+For extra information, the aurocorrelation factor can be examined.
+
+```{r}
+acf(mydata$`Mortgaged House Sale Statistics`, lag.max = 40, main = "Autocorrelation of Mortgaged House Sale Statistics") 
+```
+
+When the plot is examined, it is possible to say that the values of lag 1 and lag 2 are higher than the upper bound, while the other values are within the limits. There is not a correlation over the limits at lag 10. This means that a sharp yearly seasonality is not available in this data. Also, the shape of the plot does not reflect a sharp seasonality. Trend and seasonality will be examined during the creation of models.
+
+## Building Models For Forecast
+
+Before building a model, examination of correlations among target variable and other factors will be useful. This examination will be made in two different ways. First, the correlation among target variable and other factors will be found and plotted. After that, logarithmic results will be found and plotted.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggpairs(mydata[,-1])
+ggpairs(log(mydata[,-1]))
+```
+
+As can be seen from the correlogram, mortgaged house sale statistics are mostly related to total house statistics, interest rate for house credits and interest rate. In the suitable model to be created, these data will be needed in order for the model to have meaning.
+
+Now, the first model can be created. It is very appropriate to start with only month factor. To do that, a new column is created to give the corresponding number for each month in the row. After the manipulation of the data, first model is created. Here you can find the model:
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+month <- seq(1,12, by=1)
+mydata <- cbind(mydata,month)
+l <- lm(`Mortgaged House Sale Statistics`~ as.factor(month), data=mydata)
+summary(l)
+```
+
+By looking at the adjusted R value, it can be seen that the model is not appropriate. All factored months are not significant for the data. If we check the residuals:
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+checkresiduals(l)
+```
+
+Mean of the residuals is not equal to zero. Improvements can be made upon the model. Trend data can be added to see if that works.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+
+mydata <- mydata[, trend:=1:.N]
+l2 <- lm(`Mortgaged House Sale Statistics`~ as.factor(month) + trend, data=mydata)
+summary(l2)
+checkresiduals(l2)
+```
+
+As it can be seen above, trend and month factor are not related to the data. Our R squared value is not appropriate. They should be canceled and other factors should be added to the model. Interest Rate For House Credits has highest correlation with Mortgaged House Sales. Let's consider a model with Interest Rate For House Credits.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+l3 <- lm(formula = `Mortgaged House Sale Statistics` ~ `Interest Rate For House Credits`, data = mydata)
+summary(l3)
+checkresiduals(l3)
+```
+
+A better result is obtained in this way. Interest Rate For House Credits is a significant factor in the model. Our R-squared value is 0.4518 which is an appropriate value for the first model. As a second improvement, Total House Sale Statistics can be added to the model.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+l4 <- lm(formula = `Mortgaged House Sale Statistics` ~ `Interest Rate For House Credits` + `Total House Sale Statistics`, data = mydata)
+summary(l4)
+checkresiduals(l4)
+```
+
+New adjusted R squared value is 0.8358 which means there is a huge improvement on the model. This model will give us better estimates while predicting the next months' values. Now, we can look for a model with logarithmic values of the variables.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+l5 <- lm(formula = log(mydata$`Mortgaged House Sale Statistics`) ~ log(mydata$`Interest Rate For House Credits`) + log(mydata$`Total House Sale Statistics`), data = mydata)
+summary(l5)
+checkresiduals(l5)
+```
+
+A better R squared value is obtained and the mean of the residuals is almost equal to zero. A better model can be created by adding Interest Rate and Consumer Confidence Index which are also related to Mortgaged House Sale Statistics.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+l6 <- lm(formula = log(mydata$`Mortgaged House Sale Statistics`) ~ log(mydata$`Interest Rate For House Credits`) + log(mydata$`Total House Sale Statistics`) + log(mydata$`Interest Rate`) + log(mydata$`Consumer Confidence Index`), data = mydata)
+summary(l6)
+checkresiduals(l6)
+```
+
+Model is almost done except the autocorrelation problem. Lagged residual values should be updated.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+mydata <- mydata[,residual_1:=0]
+mydata$residual_1[1]<- NA
+mydata$residual_1[2:71]<- residuals(l6)[1:70]
+model <- lm(formula = log(mydata$`Mortgaged House Sale Statistics`) ~ log(mydata$`Interest Rate For House Credits`) + log(mydata$`Total House Sale Statistics`) + log(mydata$`Interest Rate`) + log(mydata$`Consumer Confidence Index` + residual_1), data = mydata)
+summary(model)
+checkresiduals(model)
+```
+
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+mydata[,fitted := fitted(l6)]
+mydata[,residual := residuals(l6)]
+
+mydata %>%
+  ggplot(aes(x=fitted, y=residual)) + geom_point()
+
+mydata %>%
+  ggplot(aes(x=fitted, y=log(mydata$`Mortgaged House Sale Statistics`))) + 
+  geom_point() +
+  geom_abline(slope=1, intercept=0)
+```
+
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+x <- "2020-12"
+x <- as.yearmon(x)
+x
+
+mydata=rbind(mydata, data.table(Date=x, month=as.factor(12)),fill=TRUE)
+mydata[,fitted:=predict(l6, mydata[is.na(fitted)==TRUE])]
+print(mydata[72]$fitted)
+tail(mydata, 5)
+```
+
+
+# Conclusion
+
+
+## References
+
+* [EVDS Web Page](https://evds2.tcmb.gov.tr/)
+* [STHDA](http://www.sthda.com/english/)
+* [Stackoverflow](https://stackoverflow.com/)
+
+## Appendices
+
+Click [here](https://bu-ie-360.github.io/fall20-mibaykal/files/HW333.Rmd) to reach the RMD file.
