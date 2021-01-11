@@ -66,7 +66,7 @@ First of all, We can draw the histogram of our target variable to find some info
 ```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
 ggplot(mydata, aes(x=`Mortgaged House Sale Statistics`, y=..density..)) +
   geom_histogram(colour="blue", fill="lightblue", bins = 10)+ 
-  geom_density(alpha=.3, colour="orchid", fill="orangered4") + labs(title = "Histograms of Number of Mortgaged House Sale in Turkey between 2015-2020", x =   "Number of Mortgaged House Sale", y = "Density") + theme_classic() 
+  geom_density(alpha=.2, colour="orchid", fill="orangered2") + labs(title = "Histograms of Number of Mortgaged House Sale in Turkey between 2015-2020",    "Number of Mortgaged House Sale", y = "Density") + theme_classic() 
 ```
 
 From the histogram, we can conclude that we have two outlier values, which correspond to a number higher than 1e+05, in the target data. We can filter the values higher than 1e+05 by using the "filter" function:
@@ -184,6 +184,9 @@ summary(model)
 checkresiduals(model)
 ```
 
+The expected result could not be achieved in the model. The cause is unknown. No decrease in autoregression values was detected. Studies will continue to solve the problem. 
+
+Here you can see the plot of fitted values and residuals according to the model. Also, the plot of fitted values and logarithmic values of target variable is provided.
 
 ```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
 mydata[,fitted := fitted(l6)]
@@ -199,6 +202,10 @@ mydata %>%
 ```
 
 
+## Prediction (December 2020)
+
+Another row is added for December 2020 and some manipulations are made. Prediction is made and put into the appropriate cell. This cell is printed out.
+
 ```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
 x <- "2020-12"
 x <- as.yearmon(x)
@@ -213,6 +220,11 @@ tail(mydata, 5)
 
 # Conclusion
 
+A model is obtained after analyzing and manipulating the data and other factors that affects the data. This model predicts monthly mortgaged house sales in Turkey by some errors.
+
+The autoregression problem in the model could not be solved even though there was no serious problem in the code, and the data was not fully suitable for such a model, which affected the accuracy of the study. In the model, there are multiple independent variables that are related to Mortgaged House Sales Statistics. 
+
+Again, with a small error caused by the code, although there is no problem in the steps, the estimate cannot be placed in the decided cell. All aside, the fact that the data used does not have a trend and a sharp seasonality shows that the data is not suitable for creating such a model. It may be possible to achieve different and better results by trying different models.
 
 ## References
 
