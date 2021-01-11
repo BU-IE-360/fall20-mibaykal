@@ -65,8 +65,8 @@ First of all, We can draw the histogram of our target variable to find some info
 
 ```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
 ggplot(mydata, aes(x=`Mortgaged House Sale Statistics`, y=..density..)) +
-  geom_histogram(colour="blue", fill="lightskyblue", bins = 10)+ 
-  geom_density(alpha=.2, colour="red", fill="orange") + labs(title = "Histograms of Number of Mortgaged House Sale in Turkey between 2015-2020", x = "       Number of Mortgaged House Sale", y = "Density") + theme_classic() + theme(axis.text.x = element_text(angle = 30, hjust = 1))
+  geom_histogram(colour="blue", fill="lightblue", bins = 10)+ 
+  geom_density(alpha=.3, colour="orchid", fill="orangered4") + labs(title = "Histograms of Number of Mortgaged House Sale in Turkey between 2015-2020", x =   "Number of Mortgaged House Sale", y = "Density") + theme_classic() 
 ```
 
 From the histogram, we can conclude that we have two outlier values, which correspond to a number higher than 1e+05, in the target data. We can filter the values higher than 1e+05 by using the "filter" function:
