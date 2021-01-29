@@ -1,0 +1,294 @@
+---
+title: "Forecasting with Stationary Series"
+author: "Muhammed Ikbal Baykal - IE360 - Fall 2020"
+output: html_document
+---
+# Introduction
+
+There exists a market in Turkey about the production and the distribution of the electricity. EPIAS is the controller of this market. Energy Exchange Istanbul (EXIST) within EPIAS aims to plan, establish, develop and manage energy market within the market operation license in an effective, transparent, reliable manner that fulfills the requirements of energy market and to be an energy market management that procures reliable reference price without discriminating equivalent parties and maximizes the liquidity with increasing number of market participants, product range and trading volume as well as allowing to merchandise by means of market merger. A lot of data can be seen in [EPIAS Transperency Platform](https://seffaflik.epias.com.tr/transparency/tuketim/gerceklesen-tuketim/gercek-zamanli-tuketim.xhtml).
+
+In this study, we aim to transform the daily electricity consumption data of Turkey between 01.01.2017 and 08.01.2021 to stationary data by using differencing approach. Some test will be applied for stationarity and after data become stationary, some forecasts will be made using AR and MA models. The daily consumption between 09.01.2021 and 23.01.2021 will be predicted and compared with the real values. Some values will be found and comments will be made about the accuracy of the forecast.
+
+# Data 
+## Data Manipulation
+
+First of all, necessary libraries are added. 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+library(dplyr)
+library(lubridate)
+library(readxl)
+library(data.table)
+library(forecast)
+library(urca)
+library(ggplot2)
+```
+
+After libraries are added, data from EPIAS are read and some manipulations are done to make data useful. 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+consumption <- as.data.table(read_excel("hw4data.xlsx"))
+colnames(consumption) = c("Date", "Hour", "Consumption")
+consumption[,Consumption:=gsub('\\.', '', Consumption)]
+consumption[,Consumption:=gsub('\\,', '.', Consumption)]
+consumption$Date <- as.Date(consumption$Date, format = "%d.%m.%Y")
+consumption$Hour <- rep(seq(0,23, by=1), times = nrow(consumption)/24)
+consumption[,Consumption:=as.numeric(Consumption)]
+head(consumption, 5)
+```
+
+Now, data are in useful format. We will made predictions on daily basis. So, we need to convert the data to daily consumption data by using mean of the hourly consumption data.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+dailyconsumption=consumption[,list(meanconsumption=mean(Consumption, na.rm = T)),by=list(Date)]
+head(dailyconsumption, 5)
+```
+
+Now, data are ready. We can continue with some visualization. 
+
+## Data Visualization
+
+It is useful to plot some graphs to understand the data we have.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggplot(dailyconsumption, aes(x=Date, y=meanconsumption)) + geom_line(size = 0.5, color="blue") +
+        labs(title = "Daily Consumption of Electricity (mWh) in Turkey between January 2017- January 2021", x = "Date", y = "Consumption (mWh)")
+```
+
+Let us see the two weeks period.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+plot(dailyconsumption[1:14])
+plot(dailyconsumption[1:14], type="l")
+```
+
+The seasonality can be seen from the above graphs. We can see the difference between seasons, Some outliers can also be seen in the graphs. The steep decreases are usually religious holidays. In 2020, after March, Covid-19 effect for the electricity consumption can be seen. It is probably because of industrial shutdowns. Second and third graphs show the similarity of electricity consumption between two weeks.
+
+## Data Analysis
+
+Now, lagged values will be examined. They are important in such transformations. "Autocorrelation and Partial Autocorrelation Plots of Daily Mean Electricity Consumption" will be provided below. 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+plot(acf(dailyconsumption$meanconsumption, plot=F), main = "Autocorrelation Plot of Daily Mean Electricity Consumption") 
+plot(pacf(dailyconsumption$meanconsumption, plot=F), main = "Partial Autocorrelation Plot of Daily Mean Electricity Consumption")
+```
+
+From the first graph, it can be concluded that positive autocorrelation can be found in long terms. Lag 1 and lag 7 periods seem to be important factors in the graph. A strong weekly seasonality can be found. In the second graph, lag 1 and lag 7 effects can be seen more clearly. Lag 7 corresponds to weekly effect whereas lag 1 may correspond to a total increase. 
+
+Now, let us see the KPSS test of consumption.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+summary(ur.kpss(dailyconsumption$meanconsumption))
+```
+
+The value is under all critical values but some steps can be taken to get a more acceptable value. Now the weekly effect will be deleted and test will be applied once more. 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+dailyconsumption[,differ:=meanconsumption-shift(meanconsumption,7)]
+ggplot(dailyconsumption,aes(x=Date)) + geom_line(aes(y=differ))
+summary(ur.kpss(dailyconsumption$differ))
+```
+
+It can be concluded that a decreased value can be obtained by differencing weekly. Now, let us consider lag 1 values. Lag 7 and lag 1 values will be considered according to their weights.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+dailyconsumption[,lag1:=shift(meanconsumption,1)]
+dailyconsumption[,lag7:=shift(meanconsumption,7)]
+dailyconsumption[,differencinglag1and7:=meanconsumption-0.3*lag7-0.7*lag1]
+summary(ur.kpss(dailyconsumption$differencinglag1and7))
+```
+
+A better result could not be obtained, now let us examine the outliers. A new column is added and 1 is put if the day is religious or formal holiday. (Others=0) Each special days will be added manually.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+dailyconsumption[, specialday:=0]
+
+dailyconsumption[ Date == "2017-01-01" ,specialday := 1]
+dailyconsumption[ Date == "2017-04-23" ,specialday := 1]
+dailyconsumption[ Date == "2017-05-01" ,specialday := 1]
+dailyconsumption[ Date == "2017-05-19" ,specialday := 1]
+dailyconsumption[ Date == "2017-06-24" ,specialday := 1]
+dailyconsumption[ Date == "2017-06-25" ,specialday := 1]
+dailyconsumption[ Date == "2017-06-26" ,specialday := 1]
+dailyconsumption[ Date == "2017-06-27" ,specialday := 1]
+dailyconsumption[ Date == "2017-07-15" ,specialday := 1]
+dailyconsumption[ Date == "2017-08-30" ,specialday := 1]
+dailyconsumption[ Date == "2017-08-31" ,specialday := 1]
+dailyconsumption[ Date == "2017-09-01" ,specialday := 1]
+dailyconsumption[ Date == "2017-09-02" ,specialday := 1]
+dailyconsumption[ Date == "2017-09-03" ,specialday := 1]
+dailyconsumption[ Date == "2017-09-04" ,specialday := 1]
+dailyconsumption[ Date == "2017-10-29" ,specialday := 1]
+dailyconsumption[ Date == "2017-12-31" ,specialday := 1]
+
+dailyconsumption[ Date == "2018-01-01" ,specialday := 1]
+dailyconsumption[ Date == "2018-04-23" ,specialday := 1]
+dailyconsumption[ Date == "2018-05-01" ,specialday := 1]
+dailyconsumption[ Date == "2018-05-19" ,specialday := 1]
+dailyconsumption[ Date == "2018-06-14" ,specialday := 1]
+dailyconsumption[ Date == "2018-06-15" ,specialday := 1]
+dailyconsumption[ Date == "2018-06-16" ,specialday := 1]
+dailyconsumption[ Date == "2018-06-17" ,specialday := 1]
+dailyconsumption[ Date == "2018-07-15" ,specialday := 1]
+dailyconsumption[ Date == "2018-08-20" ,specialday := 1]
+dailyconsumption[ Date == "2018-08-21" ,specialday := 1]
+dailyconsumption[ Date == "2018-08-22" ,specialday := 1]
+dailyconsumption[ Date == "2018-08-23" ,specialday := 1]
+dailyconsumption[ Date == "2018-08-24" ,specialday := 1]
+dailyconsumption[ Date == "2018-08-30" ,specialday := 1]
+dailyconsumption[ Date == "2018-10-29" ,specialday := 1]
+dailyconsumption[ Date == "2018-12-31" ,specialday := 1]
+
+dailyconsumption[ Date == "2019-01-01" ,specialday := 1]
+dailyconsumption[ Date == "2019-04-23" ,specialday := 1]
+dailyconsumption[ Date == "2019-05-01" ,specialday := 1]
+dailyconsumption[ Date == "2019-05-19" ,specialday := 1]
+dailyconsumption[ Date == "2019-06-04" ,specialday := 1]
+dailyconsumption[ Date == "2019-06-05" ,specialday := 1]
+dailyconsumption[ Date == "2019-06-06" ,specialday := 1]
+dailyconsumption[ Date == "2019-06-07" ,specialday := 1]
+dailyconsumption[ Date == "2019-07-15" ,specialday := 1]
+dailyconsumption[ Date == "2019-08-10" ,specialday := 1]
+dailyconsumption[ Date == "2019-08-11" ,specialday := 1]
+dailyconsumption[ Date == "2019-08-12" ,specialday := 1]
+dailyconsumption[ Date == "2019-08-13" ,specialday := 1]
+dailyconsumption[ Date == "2019-08-14" ,specialday := 1]
+dailyconsumption[ Date == "2019-08-30" ,specialday := 1]
+dailyconsumption[ Date == "2019-10-29" ,specialday := 1]
+dailyconsumption[ Date == "2019-12-31" ,specialday := 1]
+
+dailyconsumption[ Date == "2020-01-01" ,specialday := 1]
+dailyconsumption[ Date == "2020-04-23" ,specialday := 1]
+dailyconsumption[ Date == "2020-05-01" ,specialday := 1]
+dailyconsumption[ Date == "2020-05-19" ,specialday := 1]
+dailyconsumption[ Date == "2020-05-23" ,specialday := 1]
+dailyconsumption[ Date == "2020-05-24" ,specialday := 1]
+dailyconsumption[ Date == "2020-05-25" ,specialday := 1]
+dailyconsumption[ Date == "2020-05-26" ,specialday := 1]
+dailyconsumption[ Date == "2020-07-15" ,specialday := 1]
+dailyconsumption[ Date == "2020-07-30" ,specialday := 1]
+dailyconsumption[ Date == "2020-07-31" ,specialday := 1]
+dailyconsumption[ Date == "2020-08-01" ,specialday := 1]
+dailyconsumption[ Date == "2020-08-02" ,specialday := 1]
+dailyconsumption[ Date == "2020-08-03" ,specialday := 1]
+dailyconsumption[ Date == "2020-08-30" ,specialday := 1]
+dailyconsumption[ Date == "2020-10-29" ,specialday := 1]
+dailyconsumption[ Date == "2020-12-31" ,specialday := 1]
+```
+
+The value of these days will be changed by the mean of one week before and one week ahead values. So, the outliers will be excluded from the data. Let us see the new KPSS test value.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+dailyconsumption[,adjusted:=meanconsumption]
+dailyconsumption[,oneweek:=shift(meanconsumption,-7)]
+dailyconsumption[specialday==1, adjusted:=(lag7+oneweek)/2]
+
+dailyconsumption[,nlag1:=shift(adjusted,1)]
+dailyconsumption[,nlag7:=shift(adjusted,7)]
+dailyconsumption[,newdifferencinglag1and7:=adjusted-0.3*nlag7-0.7*nlag1]
+summary(ur.kpss(dailyconsumption$newdifferencinglag1and7))
+```
+
+Better value is not obtained, the first differenced KPSS test value was better than this. Let us examine the partial autocorrelation plot.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+plot(pacf(dailyconsumption[9:1469]$newdifferencinglag1and7, plot=F), main = "Partial Autocorrelation Plot of Differenced Daily Mean Electricity Consumption Without Outliers")
+```
+
+Lag1 problem is handled well, but still there are some problems. Day of the week effect seems to be perminent. 
+
+# Forecast
+
+Let us construct two models. Model2 will be used to predict due to its KPSS test result.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+nahead=15
+model1 = auto.arima(dailyconsumption$newdifferencinglag1and7, seasonal=F, trace=T)
+model2 = auto.arima(dailyconsumption$differ,seasonal=F,trace=T)
+summary(model2)
+```
+
+Auto.arima function suggests that best choice for predictions is to use ARIMA(2,0,2) which means 2 AR and 2 MA factors will be used in the model.
+15 day ahead forecast will be made.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+forecasted = forecast(model2,h=nahead)
+print(forecasted)
+```
+
+These values give us the differenced forecasts. We need to make some calculations and calculate the forecasted consumption values for coming days.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+temporary=copy(dailyconsumption)
+
+test=dailyconsumption[1:nahead]
+test[,meanconsumption:=NA]
+test$Date=max(dailyconsumption$Date)+c(1:nahead)
+test[,predicteddiffer:=as.numeric(forecasted$mean)]
+
+temporary=rbindlist(list(temporary,test),fill=T,use.names=T)
+temporary[is.na(predicteddiffer),predicteddiffer:=differ] # past values are known
+
+# transforming to the original scale
+temporary[,forecastval:=predicteddiffer+shift(meanconsumption,14)]
+```
+
+Now, we need to add the actual values to be able to compare our prediction accuracy. 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+realconsumption <- as.data.table(read_excel("hw4data3.xlsx"))
+colnames(realconsumption) = c("Date", "Hour", "Consumption")
+realconsumption[,Consumption:=gsub('\\.', '', Consumption)]
+realconsumption[,Consumption:=gsub('\\,', '.', Consumption)]
+realconsumption$Date <- as.Date(realconsumption$Date, format = "%d.%m.%Y")
+realconsumption$Hour <- rep(seq(0,23, by=1), times = nrow(realconsumption)/24)
+realconsumption[,Consumption:=as.numeric(Consumption)]
+head(realconsumption, 5)
+
+realdailyconsumption=realconsumption[,list(meanconsumption=mean(Consumption, na.rm = T)),by=list(Date)]
+head(realdailyconsumption)
+```
+
+Here are the mean consumption values between 09.012021 and 23.01.2021. The predicted values will be added to a new column called "predicted". After that, error calculations will be made.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+realdailyconsumption[, predicted:=0] 
+tail(realdailyconsumption)
+
+realdailyconsumption$predicted <- temporary$forecastval[1470:1484]
+
+output <- function(actual, forecasted){
+  n=length(actual)
+  error = actual-forecasted
+  mean=mean(actual)
+  sd=sd(actual)
+  bias = sum(error)/sum(actual)
+  mape = sum(abs(error/actual))/n
+  mad = sum(abs(error))/n
+  wmape = mad/mean
+  l = data.frame(n,mean,sd,bias,mape,mad,wmape)
+  return(l)
+}
+
+output(realdailyconsumption$meanconsumption[1:14], realdailyconsumption$predicted[1:14])
+```
+
+The output statistics are provided.
+
+# Conclusion
+
+During the study, daily electricity consumption data of Turkey were examined and stationarity processes were applied to data by using appropriate approaches. Differencing method was used as an appropriate approach. By differencing approach, we have reached an effective solution and made some predictions. Predictions were made by an ARIMA model.
+
+To be able to evaluate the performance of our model, some statistics are provided between the actual values and predicted values. By using differencing approach we catched some weekly seasonality and one day ahead effect. In the output statistics, we have found some small and acceptable numbers. 
+
+In conclusion, stationarity is an effective way of finding appropriate models to data that we will make predictions upon. However, It leads to some errors or some behaviours that cannot be explained during the forecast process.
+
+# References
+
+* [EPIAS](https://seffaflik.epias.com.tr/transparency/tuketim/gerceklesen-tuketim/gercek-zamanli-tuketim.xhtml)
+* [STHDA](http://www.sthda.com/english/)
+* [Stackoverflow](https://stackoverflow.com/)
+
+# Appendices
+
+Click [here](https://bu-ie-360.github.io/fall20-mibaykal/files/HW4.Rmd) to reach the RMD file.
