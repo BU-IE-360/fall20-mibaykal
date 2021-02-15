@@ -1,0 +1,721 @@
+---
+title: "Final"
+author: "Muhammed Ikbal Baykal - IE360 - Fall 2020"
+output: html_document
+---
+# Introduction
+
+There exists a market in Turkey about the production and the distribution of the electricity. EPIAS is the controller of this market. Energy Exchange Istanbul (EXIST) within EPIAS aims to plan, establish, develop and manage energy market within the market operation license in an effective, transparent, reliable manner that fulfills the requirements of energy market and to be an energy market management that procures reliable reference price without discriminating equivalent parties and maximizes the liquidity with increasing number of market participants, product range and trading volume as well as allowing to merchandise by means of market merger. A lot of data can be seen in [EPIAS Transperency Platform](https://seffaflik.epias.com.tr/transparency/tuketim/gerceklesen-tuketim/gercek-zamanli-tuketim.xhtml).
+
+In this study, we aim to transform the daily electricity consumption data of Turkey between 01.01.2017 and 08.01.2021 to stationary data by using differencing approach. Some test will be applied for stationarity and after data become stationary, some forecasts will be made using AR and MA models. The daily consumption between 09.01.2021 and 23.01.2021 will be predicted and compared with the real values. Some values will be found and comments will be made about the accuracy of the forecast.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+library(lubridate)
+library(readxl)
+library(zoo)
+library(data.table)
+library(urca)
+require(jsonlite)
+require(httr)
+require("fpp")
+require("ggplot2")
+require("forecast")
+require("stats")
+require("xlsx")
+require("lubridate")
+require("readr")
+
+
+setwd("C:/Users/90533/Desktop")
+mydata <- as.data.table(read_csv("production_data_with_weather.csv"))
+
+
+colnames(mydata) <- c("Date", "Hour", "Production", "Timestamp", "Cloud1", "Cloud2","Cloud3","Cloud4", "Radiation1", "Radiation2", 
+                      "Radiation3", "Radiation4", "Temp1", "Temp2","Temp3","Temp4")
+
+mydata$Date <- as.Date(mydata$Date)
+mydata$Timestamp <- as.POSIXct(mydata$Timestamp, format = "%Y-%m-%dT%TZ")
+
+mydata[,Month:=as.factor(month(Date))]
+mydata[,Trend:=1:.N]
+mydata[,Weekday:=weekdays(Date)]
+mydata[,Predicted:=0]
+mydata[,Predictedlm:=0]
+
+
+tsmydata <- ts(mydata$Production)
+plot(tsmydata)
+
+summary(ur.kpss(mydata$Production))
+
+mydailydata=mydata[,list(sumproduction=sum(Production, na.rm = T)),by=list(Date)]
+
+tsmydata2 <- ts(mydailydata$sumproduction)
+plot(tsmydata2)
+
+summary(ur.kpss(mydailydata$sumproduction))
+
+acf(mydata$Production)
+pacf(mydata$Production)
+
+hour0 <- mydata[Hour==0]
+hour1 <- mydata[Hour==1]
+hour2 <- mydata[Hour==2]
+hour3 <- mydata[Hour==3]
+hour4 <- mydata[Hour==4]
+hour5 <- mydata[Hour==5]
+hour6 <- mydata[Hour==6]
+hour7 <- mydata[Hour==7]
+hour8 <- mydata[Hour==8]
+hour9 <- mydata[Hour==9]
+hour10 <- mydata[Hour==10]
+hour11 <- mydata[Hour==11]
+hour12 <- mydata[Hour==12]
+hour13 <- mydata[Hour==13]
+hour14 <- mydata[Hour==14]
+hour15 <- mydata[Hour==15]
+hour16 <- mydata[Hour==16]
+hour17 <- mydata[Hour==17]
+hour18 <- mydata[Hour==18]
+hour19 <- mydata[Hour==19]
+hour20 <- mydata[Hour==20]
+hour21 <- mydata[Hour==21]
+hour22 <- mydata[Hour==22]
+hour23 <- mydata[Hour==23]
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour5[Date<current_test_date]
+  test_data=hour5[Date==current_test_date]
+  
+  model5 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted5 <- forecast(model5, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted5$mean, 1)]
+  results[[i+1]]=test_data
+  hour5[Date==current_test_date+1, Predicted:= tail(predicted5$mean, 1)]
+}
+
+results
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour6[Date<current_test_date]
+  test_data=hour6[Date==current_test_date]
+  
+  model6 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted6 <- forecast(model6, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted6$mean, 1)]
+  results[[i+1]]=test_data
+  hour6[Date==current_test_date+1, Predicted:= tail(predicted6$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour7[Date<current_test_date]
+  test_data=hour7[Date==current_test_date]
+  
+  model7 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted7 <- forecast(model7, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted7$mean, 1)]
+  results[[i+1]]=test_data
+  hour7[Date==current_test_date+1, Predicted:= tail(predicted7$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour8[Date<current_test_date]
+  test_data=hour8[Date==current_test_date]
+  
+  model8 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted8 <- forecast(model8, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted8$mean, 1)]
+  results[[i+1]]=test_data
+  hour8[Date==current_test_date+1, Predicted:= tail(predicted8$mean, 1)]
+}
+
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour9[Date<current_test_date]
+  test_data=hour9[Date==current_test_date]
+  
+  model9 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted9 <- forecast(model9, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted9$mean, 1)]
+  results[[i+1]]=test_data
+  hour9[Date==current_test_date+1, Predicted:= tail(predicted9$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour10[Date<current_test_date]
+  test_data=hour10[Date==current_test_date]
+  
+  model10 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted10 <- forecast(model10, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted10$mean, 1)]
+  results[[i+1]]=test_data
+  hour10[Date==current_test_date+1, Predicted:= tail(predicted10$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hou11[Date<current_test_date]
+  test_data=hour11[Date==current_test_date]
+  
+  model11 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted11 <- forecast(model11, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted11$mean, 1)]
+  results[[i+1]]=test_data
+  hour11[Date==current_test_date+1, Predicted:= tail(predicted11$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour12[Date<current_test_date]
+  test_data=hour12[Date==current_test_date]
+  
+  model12 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted12 <- forecast(model12, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted12$mean, 1)]
+  results[[i+1]]=test_data
+  hour12[Date==current_test_date+1, Predicted:= tail(predicted12$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour13[Date<current_test_date]
+  test_data=hour13[Date==current_test_date]
+  
+  model13 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted13 <- forecast(model13, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted13$mean, 1)]
+  results[[i+1]]=test_data
+  hour13[Date==current_test_date+1, Predicted:= tail(predicted13$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour14[Date<current_test_date]
+  test_data=hour14[Date==current_test_date]
+  
+  model14 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted14 <- forecast(model14, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted14$mean, 1)]
+  results[[i+1]]=test_data
+  hour14[Date==current_test_date+1, Predicted:= tail(predicted14$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour15[Date<current_test_date]
+  test_data=hour15[Date==current_test_date]
+  
+  model15 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted15 <- forecast(model15, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted15$mean, 1)]
+  results[[i+1]]=test_data
+  hour15[Date==current_test_date+1, Predicted:= tail(predicted15$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour16[Date<current_test_date]
+  test_data=hour16[Date==current_test_date]
+  
+  model16 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted16 <- forecast(model16, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted16$mean, 1)]
+  results[[i+1]]=test_data
+  hour16[Date==current_test_date+1, Predicted:= tail(predicted16$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour17[Date<current_test_date]
+  test_data=hour17[Date==current_test_date]
+  
+  model17 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted17 <- forecast(model17, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted17$mean, 1)]
+  results[[i+1]]=test_data
+  hour17[Date==current_test_date+1, Predicted:= tail(predicted17$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour18[Date<current_test_date]
+  test_data=hour18[Date==current_test_date]
+  
+  model18 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted18 <- forecast(model18, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted18$mean, 1)]
+  results[[i+1]]=test_data
+  hour18[Date==current_test_date+1, Predicted:= tail(predicted18$mean, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour19[Date<current_test_date]
+  test_data=hour19[Date==current_test_date]
+  
+  model19 <- auto.arima(train_data$Production,seasonal=F,trace=T)
+  predicted19 <- forecast(model19, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted19$mean, 1)]
+  results[[i+1]]=test_data
+  hour19[Date==current_test_date+1, Predicted:= tail(predicted19$mean, 1)]
+}
+
+mydatanew <- rbind(hour0, hour1, hour2, hour3, hour4, hour5, hour6, hour7, hour8, hour9, hour10, hour11, hour12,
+                   hour13, hour14, hour15, hour16, hour17, hour18, hour19, hour20, hour21, hour22, hour23)
+mydatanew=mydatanew[order(Date,Hour)]
+View(mydatanew)
+
+output <- function(actual, forecasted){
+  n=length(actual)
+  error = actual-forecasted
+  mean=mean(actual)
+  sd=sd(actual)
+  bias = sum(error)/sum(actual)
+  mape = sum(abs(error/actual))/n
+  mad = sum(abs(error))/n
+  wmape = mad/mean
+  l = data.frame(n,mean,sd,bias,mape,mad,wmape)
+  return(l)
+}
+
+output(mydatanew$Production[10057:11544], mydatanew$Predicted[10057:11544])
+
+
+
+
+
+
+l5=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+      Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend + Weekday, hour5)
+summary(l5)
+
+l6=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend + Weekday, hour6)
+summary(l6)
+
+l7=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend+ Weekday, hour7)
+summary(l7)
+
+l8=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend + Weekday, hour8)
+summary(l8)
+
+l9=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour9)
+summary(l9)
+
+l10=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour10)
+summary(l10)
+
+l11=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour11)
+summary(l11)
+
+l12=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour12)
+summary(l12)
+
+l13=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour13)
+summary(l13)
+
+l14=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour14)
+summary(l14)
+
+l15=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour15)
+summary(l15)
+
+l16=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour16)
+summary(l16)
+
+l17=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour17)
+summary(l17)
+
+l18=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour18)
+summary(l18)
+
+l19=lm(Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+         Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, hour19)
+summary(l19)
+
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour5[Date<current_test_date]
+  test_data=hour5[Date==current_test_date]
+  
+  model5 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                 Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted5 <- predict(model5, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted5, 1)]
+  results[[i+1]]=test_data
+  hour5[Date==current_test_date+1, Predictedlm:= tail(predicted5, 1)]
+}
+
+results
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour6[Date<current_test_date]
+  test_data=hour6[Date==current_test_date]
+  
+  model6 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                 Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted6 <- predict(model6, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted6, 1)]
+  results[[i+1]]=test_data
+  hour6[Date==current_test_date+1, Predictedlm:= tail(predicted6, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour7[Date<current_test_date]
+  test_data=hour7[Date==current_test_date]
+  
+  model7 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                 Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted7 <- predict(model7, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted7, 1)]
+  results[[i+1]]=test_data
+  hour7[Date==current_test_date+1, Predictedlm:= tail(predicted7, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour8[Date<current_test_date]
+  test_data=hour8[Date==current_test_date]
+  
+  model8 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                 Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted8 <- predict(model8, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted8, 1)]
+  results[[i+1]]=test_data
+  hour8[Date==current_test_date+1, Predictedlm:= tail(predicted8, 1)]
+}
+
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour9[Date<current_test_date]
+  test_data=hour9[Date==current_test_date]
+  
+  model9 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                 Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted9 <- predict(model9, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted9, 1)]
+  results[[i+1]]=test_data
+  hour9[Date==current_test_date+1, Predictedlm:= tail(predicted9, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour10[Date<current_test_date]
+  test_data=hour10[Date==current_test_date]
+  
+  model10 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                  Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted10 <- predict(model10, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted10, 1)]
+  results[[i+1]]=test_data
+  hour10[Date==current_test_date+1, Predictedlm:= tail(predicted10, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hou11[Date<current_test_date]
+  test_data=hour11[Date==current_test_date]
+  
+  model11 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                  Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted11 <- predict(model11, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted11, 1)]
+  results[[i+1]]=test_data
+  hour11[Date==current_test_date+1, Predictedlm:= tail(predicted11, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour12[Date<current_test_date]
+  test_data=hour12[Date==current_test_date]
+  
+  model12 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                  Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted12 <- predict(model12, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted12, 1)]
+  results[[i+1]]=test_data
+  hour12[Date==current_test_date+1, Predictedlm:= tail(predicted12, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour13[Date<current_test_date]
+  test_data=hour13[Date==current_test_date]
+  
+  model13 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                  Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted13 <- predict(model13, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted13, 1)]
+  results[[i+1]]=test_data
+  hour13[Date==current_test_date+1, Predictedlm:= tail(predicted13, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour14[Date<current_test_date]
+  test_data=hour14[Date==current_test_date]
+  
+  model14 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                  Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted14 <- predict(model14, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted14, 1)]
+  results[[i+1]]=test_data
+  hour14[Date==current_test_date+1, Predictedlm:= tail(predicted14, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour15[Date<current_test_date]
+  test_data=hour15[Date==current_test_date]
+  
+  model15 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                  Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted15 <- predict(model15, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted15, 1)]
+  results[[i+1]]=test_data
+  hour15[Date==current_test_date+1, Predictedlm:= tail(predicted15, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour16[Date<current_test_date]
+  test_data=hour16[Date==current_test_date]
+  
+  model16 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                  Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted16 <- predict(model16, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted16, 1)]
+  results[[i+1]]=test_data
+  hour16[Date==current_test_date+1, Predictedlm:= tail(predicted16, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour17[Date<current_test_date]
+  test_data=hour17[Date==current_test_date]
+  
+  model17 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                  Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted17 <- predict(model17, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted17, 1)]
+  results[[i+1]]=test_data
+  hour17[Date==current_test_date+1, Predictedlm:= tail(predicted17, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour18[Date<current_test_date]
+  test_data=hour18[Date==current_test_date]
+  
+  model18 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                  Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted18 <- predict(model18, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted18, 1)]
+  results[[i+1]]=test_data
+  hour18[Date==current_test_date+1, Predictedlm:= tail(predicted18, 1)]
+}
+
+test_start=as.Date('2020-11-30')
+results=vector('list',62)
+nahead=2
+
+for (i in 0:61){
+  current_test_date=test_start+i
+  print(current_test_date)
+  train_data=hour19[Date<current_test_date]
+  test_data=hour19[Date==current_test_date]
+  
+  model19 <- lm(formula=Production ~ Cloud1 + Cloud2 + Cloud3 + Cloud4 + Radiation1 + Radiation2 +
+                  Radiation3 + Radiation4 + Temp1 + Temp2 + Temp3 + Temp4 + Month + Trend, data=train_data)
+  predicted19 <- predict(model19, h=nahead)
+  test_data[,forecasted_piecewise:= tail(predicted19, 1)]
+  results[[i+1]]=test_data
+  hour19[Date==current_test_date+1, Predictedlm:= tail(predicted19, 1)]
+}
+
+mydatafinal <- rbind(hour0, hour1, hour2, hour3, hour4, hour5, hour6, hour7, hour8, hour9, hour10, hour11, hour12,
+                   hour13, hour14, hour15, hour16, hour17, hour18, hour19, hour20, hour21, hour22, hour23)
+mydatafinal=mydatafinal[order(Date,Hour)]
+
+output(mydatafinal$Production[10057:11544], mydatafinal$Predictedlm[10057:11544])
+
+View(mydatafinal)
+```
+
+
+# References
+
+* [EPIAS](https://seffaflik.epias.com.tr/transparency/tuketim/gerceklesen-tuketim/gercek-zamanli-tuketim.xhtml)
+* [STHDA](http://www.sthda.com/english/)
+* [Stackoverflow](https://stackoverflow.com/)
+
+# Appendices
+
+Click [here](https://bu-ie-360.github.io/fall20-mibaykal/files/Final.Rmd) to reach the RMD file.
