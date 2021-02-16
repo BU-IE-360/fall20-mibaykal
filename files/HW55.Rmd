@@ -1,0 +1,189 @@
+---
+title: "Stepwise Regression in Forecasting"
+author: "Muhammed Ikbal Baykal - IE360 - Fall 2020"
+output: html_document
+---
+# Introduction
+
+<p>The "mydata.xlsx" file contains a sample data to forecast the "Sales" (per month) of an individual. The aim is to predict if an applicant is suitable and good enough for being a salesperson or not. The variables that will be mentioned below will be used in this estimation.</p>
+
+* APT: Selling aptitude test score
+* AGE: Age (in years)
+* ANX: Anxiety test score
+* EXP: Experience (in years)
+* GPA: High school GPA
+
+<p>These variables are giving information about the applicant. In this study, a regression model will be built to make this prediction. Stepwise regression methodology will help us to determine which variables we will use when building the model. There will be two step to apply stepwise regression. First, stepwise regression will be made manually by looking at the correlations among variables. Second, step() function will be used to build the regression model that we would like to achieve. After doing these two, a comparison part between them will be provided. And finally, GPA will be added to model to check if GPA has an significant effect on sales number.</p> 
+
+# Data Analysis
+
+### Data Manipulation
+
+<p>First of all, necessary libraries are added.</p>
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+library(data.table)
+library(ggplot2)
+library(fpp)
+library(lubridate)
+library(corrplot)
+library(GGally)
+library(readxl)
+library(tidyverse)
+```
+
+<p>Data are read by "read_excel" function. Column names are changed to be able to use the data more efficiently.</p>
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+setwd("C:/Users/90533/Desktop")
+mydata <- as.data.table(read_excel("mydata.xlsx"))
+colnames(mydata) <- c("Sales", "APT", "AGE","ANX","EXP", "GPA")
+```
+
+<p>Here you can see the first 5 rows of the data.</p>
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+head(mydata, 5)
+```
+
+### Correlations
+
+<p>In this part, the correlations among the variables are provided. To be able to select which variable should be used in the model, correlation between Sales and other variables should be checked. There are two types of correlation table forms that are provided below. Let us look at the first one.</p>
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+corrdata <- data.frame("Sales" = mydata$Sales, "Selling Aptitude TS" = mydata$APT, "Age" = mydata$AGE, "Anxiety TS" = mydata$ANX, "Experience" = mydata$EXP, "High School GPA" = mydata$GPA)
+correlation <- cor(corrdata)
+corrplot(correlation, method = "number", type = "upper", tl.col = "black", addCoef.col = "white")
+```
+
+<p>As it can be seen from above correlation plot, AGE is the variable that has the highest correlation with Sales. In methodology, it means that AGE will be the first regressor of the model. The initial model will consist of Sales and AGE. APT, EXP, GPA have also good correlation with Sales. But it is not possible to know if they will be in the model or not. Further steps will show if they will be in the model or not. ANX is the variable that has the lowest correlation value with Sales.</p>
+
+At the second correlation table form below, additional scatter plots can be seen.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+ggpairs(mydata)
+```
+
+<p>From this graph, it can be understood that AGE is the variable that has the highest correlation with Sales. The effects of this correlation can be seen from the scatter plot. The negative correlation between Sales and ANX can also be seen from the scatter plot, there is an decreasing trend in that plot. There are also other positive correlations between Sales and APT, Sales and EXP, Sales and GPA. These correlations are also visible in the scatter plots. All correlations are visualized in the scatter plots.</p>
+
+### Manuel Way
+
+<p>In the initial model, we need to use AGE because of the fact that it has highest correlation with Sales. In the first model, only AGE is used according to the methodology.</p>
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+initialmodel <- lm(Sales ~ AGE, data = mydata)
+summary(initialmodel)
+```
+
+<p>First adjusted R squared value is 0.6133. After the first step, other variables are added to the initial model separately to be able to check each variable's effect on the model. To be able to do that, a function called anova() will help us. anova() will provide some F-test results and we will be able to comment on the significance of the variable that will be added to the model.</p>
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+modelapt <- lm(Sales ~ AGE + APT, data = mydata)
+anova(initialmodel, modelapt)
+
+modelanx <- lm(Sales ~ AGE + ANX, data = mydata)
+anova(initialmodel, modelanx)
+
+modelexp <- lm(Sales ~ AGE + EXP, data = mydata)
+anova(initialmodel, modelexp)
+
+modelgpa <- lm(Sales ~ AGE + GPA, data = mydata)
+anova(initialmodel, modelgpa)
+```
+
+<p>The above "Analysis of Variance Table" parts provide some information about the initial model and the models that another variable was added to. These information show the difference between the models by some statistical results such as F-test. The next variable to add to the model is selected by looking at F-test results. The variable which has the highest F-test value is the variable that is needed to be added to model. APT is the variable that we are looking for. It has the highest F-test value and the result is signifcant. So, APT can be added to the model.</p>
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+currentmodel <- lm(Sales ~ AGE + APT, data = mydata)
+summary(currentmodel)
+```
+
+<p>First adjusted R squared value is 0.8836. After this update, there is something to check. We have to check if removing one of the existing variables (not the last added one) increases the significance of the model. Since there are only two variables, AGE is the one that will be removed and tested.</p>
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+modelaptwithoutage <- lm(Sales  ~ APT, data = mydata)
+anova(currentmodel, modelaptwithoutage)
+```
+
+<p>When we check the results, it is possible to see that p value is really small (almost 0). That means AGE is significant and should be kept in the model. We will continue without any removal.</p>
+
+<p>Now, the same method is applied. Other variables, which are not in the model, are added to the current model separately to be able to check each variable's effect on the model. Let us see the results.</p> 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+newmodelanx <- lm(Sales ~ AGE + APT + ANX, data = mydata)
+anova(currentmodel, newmodelanx)
+
+newmodelexp <- lm(Sales ~ AGE + APT + EXP, data = mydata)
+anova(currentmodel, newmodelexp)
+
+newmodelgpa <- lm(Sales ~ AGE + APT + GPA, data = mydata)
+anova(currentmodel, newmodelgpa)
+```
+
+<p>From the statistic above, it can be seen that the variable which has the highest F-test value is GPA. But the problem is the size of the value. F-test value is not high enough for adding to the model. GPA is not significant for this model and cannot be added to the model. Since there is nothing to add, final model will consist of Sales, AGE, and APT. Here you can check the summary of the model again.</p> 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+summary(currentmodel)
+```
+
+### Automatic Way [step() Function]
+
+<p>step() function is another way of building a regression model by stepwise regression methodology. The difference is that this function does automatically what we have done above. It can be used in different ways, sizes by changing the parameters. In this study, we will add a null model and provide all the variables as scope. We will also set the direction as forward. It means that our initial model will not have regressors and the function will do what we have done above by comparing the AIC of current and new models.</p> 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+step(lm(Sales ~ 1, data = mydata), scope =~ APT + AGE + ANX + EXP + GPA, direction = "forward")
+```
+
+<p>From the above results, we can see what the function did step by step. At the end, it shows the final model after <none> has the smallest AIC value. If we compare the manuel way and this automatic way, it can be seen that both final models are same. The model with AGE and APT as regressors is our final model.</p>  
+
+### Final Model
+
+<p>Here is our final model.
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+currentmodel <- lm(Sales ~ AGE + APT, data = mydata)
+summary(currentmodel)
+checkresiduals(currentmodel)
+```
+
+<p>The summary gives necessary information about the model. Here we can see the necessary information for this study.
+
+* Estimate for the intercept is -83.8357.
+* Estimate for AGE (age) is 5.7969.
+* Estimate for APT (Selling aptitude test score) is 0.2015.
+
+Finally our residual variance is the square of residual standard error which is 14.348944. 
+
+In the summary, another information can be found such as R-squared value, F-statistic value, etc.</p> 
+
+
+### Adding GPA to the Model
+
+<p>To be able to test if high school GPA of a person has an influence on sales value, we can add GPA to our final model and check if it is significant or not.</p> 
+
+```{r, eval = TRUE, error=FALSE, warning=FALSE, message = FALSE, fig.width = 12, include = TRUE}
+test <- lm(Sales ~ AGE + APT + GPA, data = mydata)
+summary(test)
+```
+
+<p>In the summary of this testing model, we can see a p value of 0.661. Our hypothesis test is:
+
+* H0 = Not significant influence of GPA on Sales
+* H1 = Significant influence of GPA on Sales
+
+Since our α = 0.1, and p value of the test is 0.661 which is greater than 0.1, we fail to reject H0.</p>
+
+# Conclusion
+
+<p>In this study, the aim was to forecast if an applicant is good enough for being a salesperson or not. For this estimation, other variables such as selling aptitude test score, age (in years), anxiety test score, experience (in years), high school GPA were provided. These variables gave information about the applicant. After that, we used stepwise regression methodology to built linear regression models. We made it in two different ways. Firstly, we applied the methodology manually and progressed step by step. In the other way, we applied the methodology automatically by using step() function. We have found out that these two ways returned the same output. Some comments were made upon the final model. After that, adding GPA variable to the model was checked by using a hypothesis testing.</p>
+
+<p>To conclude, stepwise regression methodology were processed in detail in this study. The solution path was shown in two different ways through sample data. The accuracy of the final result was also tested.</p>
+
+# References
+
+* [STHDA](http://www.sthda.com/english/)
+* [Stackoverflow](https://stackoverflow.com/)
+
+# Appendices
+
+Click [here](https://bu-ie-360.github.io/fall20-mibaykal/files/HW55.Rmd) to reach the RMD file.
